@@ -1,0 +1,1 @@
+target_server ansible_host="add_your_target_ip_address" ansible_user=root ansible_ssh_pass="add_your_target_access_key" ansible_connection=ssh
