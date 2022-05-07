@@ -1,0 +1,135 @@
+
+# Tested on a Centos 9x64 remote server
+# After a successful run you can access the website
+# at http://localhost or http://{target_server}
+- name: e-commerce app
+  hosts: target_server
+  vars:
+    sql_script: /tmp/db-load-script.sql
+  become: yes
+
+  tasks:
+    - name: "1 - Deploy Pre-Requisites"
+      yum:
+        name: "firewalld"
+        state: present
+
+    - name: "Start firewalld"
+      service:
+        name: firewalld
+        state: started
+
+    - name: "Enable firewalld"
+      command: systemctl enable firewalld
+      
+    - name : "2 - Deploy and Configure Database"
+      yum:
+        name: "mariadb-server"
+        state: present
+
+    - name: "Start mariadb"
+      service:
+        name: mariadb
+        state: started
+
+    - name: "Enable mariadb and set up firewall"
+      command: "{{ item }}"
+      with_items:
+          - systemctl enable mariadb
+          - firewall-cmd --permanent --zone=public --add-port=3306/tcp
+          - firewall-cmd --reload
+
+    - name: "3 - Pull DB script"
+      get_url:
+        url: https://raw.githubusercontent.com/kodekloudhub/learning-app-ecommerce/master/assets/db-load-script.sql
+        dest: '{{ sql_script }}'
+
+    - name: Install python3
+      package:
+        name: python3
+        state: present
+
+    - name: Install or update pip
+      yum:
+        name: pip
+        state: latest
+
+    - name: "Install ansible python3 mysql dependency"
+      pip:
+        name: pymysql
+        state: present
+
+    - name: "4 - Intall httpd, php and php-mysqlnd"
+      yum:
+        name:
+         - httpd 
+         - php 
+         - php-mysqlnd
+        state: present 
+
+    - name: "Open port=80/tcp"
+      command: "{{ item }}"
+      with_items:
+          - firewall-cmd --permanent --zone=public --add-port=80/tcp
+          - firewall-cmd --reload
+
+    - name: 5 - Create a new database ecomdb 
+      community.mysql.mysql_db:
+        check_implicit_admin: yes
+        login_unix_socket: /var/lib/mysql/mysql.sock 
+        name: ecomdb
+        state: present
+
+    - name: "Create database user -> user=ecomuser pass=ecompassword priv=ALL"
+      community.mysql.mysql_user:
+        check_implicit_admin: yes
+        login_unix_socket: /var/lib/mysql/mysql.sock 
+        name: ecomuser
+        password: ecompassword
+        priv: '*.*:ALL'
+        state: present
+    
+    - name: Load script db-load-script.sql to ecomuser db
+      community.mysql.mysql_db:
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        login_user: ecomuser
+        login_password: ecompassword
+        state: import
+        name: ecomdb
+        target: '{{ sql_script }}'
+
+    - name: Change DirectoryIndex index.html to index.php in httpd.conf
+      replace:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: 'index.html'
+        replace: "index.php"
+
+    - name: "Start httpd"
+      service:
+        name: httpd
+        state: started
+
+    - name: "sudo systemctl enable httpd"
+      command: systemctl enable httpd
+
+    - name: "Install git"
+      yum:
+        name: "git"
+        state: present
+
+    - name: "git clone https://github.com/kodekloudhub/learning-app-ecommerce.git /var/www/html/"
+      command: git clone https://github.com/kodekloudhub/learning-app-ecommerce.git /var/www/html/
+
+    - name: Update index.php file to connect to the right database server
+      replace:
+        path: /var/www/html/index.php
+        regexp: '172.20.1.101'
+        replace: "localhost"
+
+    - name: Verify that the webapp is running on http://localhost with a status 200 and contains the word Purchase
+      uri:
+        url: http://localhost
+        return_content: yes
+      register: this
+      failed_when: "'Purchase' not in this.content"
+
