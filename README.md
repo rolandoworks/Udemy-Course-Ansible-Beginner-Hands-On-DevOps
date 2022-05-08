@@ -1,5 +1,5 @@
-# Udemy-Course-Ansible-Beginner-Hands-On-DevOps #
-This Udemy Course is an introduction to Ansible for DevOps.
+# Final project: Ansible Beginner Hands-On DevOps #
+The Course was an introduction to Ansible for DevOps.
 
 # Motivation: #
 This repo contains an Ansible Playbook (deployment/app-deployment.yaml) to deploy an e-commerce web-application on a target server. Below are the required steps to reproduce the app deployment.
