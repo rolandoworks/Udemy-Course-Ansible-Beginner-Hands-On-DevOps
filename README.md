@@ -19,9 +19,9 @@ This repo contains an Ansible Playbook (deployment/app-deployment.yaml) to deplo
 
 ## USAGE: ##
 On your Host(controller_server) machine:
-  a) Navigate into the /deployment directory of the cloned git project.
-  b) Update the connection variables in the inventory.txt, according to your      target_server info (i.e., ansible_host="add_ip" and ansible_ssh_pass="add_pass").
-  c) Run the following command to start the app deployment:
+  1. Navigate into the /deployment directory of the cloned git project.
+  1. Update the connection variables in the inventory.txt, according to your      target_server info (i.e., ansible_host="add_ip" and ansible_ssh_pass="add_pass").
+  1. Run the following command to start the app deployment:
   ```
   ansible-playbook -v app-deployment.yaml -i inventory.txt
   ```
